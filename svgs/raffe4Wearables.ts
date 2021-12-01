@@ -2,8 +2,56 @@
 
 const fs = require("fs");
 
-const wearables = [];
-const sleeves = [];
+const wearables: string[] = [];
+const sleeves: string[] = [];
+
+function readSvg(name: string) {
+  return stripSvg(fs.readFileSync(`./svgs/svgitems/${name}.svg`, "utf8"));
+}
+
+function wearable(name: string) {
+  const svg = readSvg(name);
+  // svg = `<g>${svg}</g>`
+  return svg;
+}
+
+export function stripSvg(svg: string) {
+  // removes svg tag
+  if (svg.includes("viewBox")) {
+    svg = svg.slice(svg.indexOf(">") + 1);
+    svg = svg.replace("</svg>", "");
+  }
+  return svg;
+}
+
+function bodyWearable(name: string) {
+  let svg = readSvg(name);
+  const leftSleevesUp =
+    '<g class="gotchi-sleeves gotchi-sleeves-left gotchi-sleeves-up">' +
+    readSvg(`${name}LeftUp`) +
+    "</g>";
+  const leftSleeves =
+    '<g class="gotchi-sleeves gotchi-sleeves-left gotchi-sleeves-down">' +
+    readSvg(`${name}Left`) +
+    "</g>";
+  const rightSleevesUp =
+    '<g class="gotchi-sleeves gotchi-sleeves-right gotchi-sleeves-up">' +
+    readSvg(`${name}RightUp`) +
+    "</g>";
+  const rightSleeves =
+    '<g class="gotchi-sleeves gotchi-sleeves-right gotchi-sleeves-down">' +
+    readSvg(`${name}Right`) +
+    "</g>";
+  svg =
+    "<g>" +
+    svg +
+    leftSleevesUp +
+    leftSleeves +
+    rightSleevesUp +
+    rightSleeves +
+    "</g>";
+  return svg;
+}
 
 wearable("130_Fireball"),
   wearable("131_DragonHorns"),
