@@ -332,7 +332,44 @@ async function main(scriptName: string) {
     "DAOFacet",
     aavegotchiDiamond.address
   )) as DAOFacet;
-  tx = await daoFacet.createHaunt(initialHauntSize, portalPrice, "0x000000");
+  if (["hardhat", "mumbai"].includes(network.name)) {
+    console.log("Adding item managers");
+
+    tx = await daoFacet.addItemManagers(itemManagers);
+    console.log("Adding item managers tx:", tx.hash);
+    receipt = await tx.wait();
+    if (!receipt.status) {
+      throw Error(`Adding item manager failed: ${tx.hash}`);
+    }
+  }
+
+  const collaterals = getCollaterals(network.name, ghstTokenContract?.address);
+
+  let collateralSvg,
+    collateralTypesAndSizes,
+    eyeShapeSvg,
+    eyeShapeTypesAndSizes;
+
+  [collateralSvg, collateralTypesAndSizes] = setupSvg([
+    "collaterals",
+    collateralsSvgs,
+  ]);
+
+  [eyeShapeSvg, eyeShapeTypesAndSizes] = setupSvg(["eyeShapes", eyeShapeSvgs]);
+
+  let totalPayload: any = {
+    _hauntMaxSize: initialHauntSize,
+    _portalPrice: portalPrice,
+    _bodyColor: "0x000000",
+    _collateralTypes: collaterals,
+    _collateralSvg: collateralSvg,
+    _collateralTypesAndSizes: collateralTypesAndSizes,
+    _eyeShapeSvg: eyeShapeSvg,
+    _eyeShapeTypesAndSizes: eyeShapeTypesAndSizes,
+  };
+
+  console.log("Creating new haunt");
+  tx = await daoFacet.createHauntWithPayload(totalPayload);
 
   receipt = await tx.wait();
   console.log("Haunt created:" + strDisplay(receipt.gasUsed));
@@ -385,32 +422,6 @@ async function main(scriptName: string) {
     aavegotchiDiamond.address
   )) as BridgeFacet;
 
-  // add collateral info
-
-  if (["hardhat", "mumbai"].includes(network.name)) {
-    console.log("Adding item managers");
-
-    tx = await daoFacet.addItemManagers(itemManagers);
-    console.log("Adding item managers tx:", tx.hash);
-    receipt = await tx.wait();
-    if (!receipt.status) {
-      throw Error(`Adding item manager failed: ${tx.hash}`);
-    }
-
-    console.log("Adding Collateral Types");
-
-    const collaterals = getCollaterals(
-      network.name,
-      ghstTokenContract?.address
-    );
-
-    console.log("collaterals:", collaterals);
-
-    tx = await daoFacet.addCollateralTypes(
-      "0",
-      getCollaterals(network.name, ghstTokenContract?.address)
-    );
-  }
   receipt = await tx.wait();
   console.log(
     "Adding Collateral Types gas used::" + strDisplay(receipt.gasUsed)
