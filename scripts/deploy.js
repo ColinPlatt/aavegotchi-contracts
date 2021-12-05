@@ -7,26 +7,6 @@
 // Fee: 100000000000000 (0.0001 LINK)
 // You can start using them now. Official announcement will be in 1-2 weeks.
 
-import { BigNumber } from "@ethersproject/bignumber";
-import { Contract } from "@ethersproject/contracts";
-import { network, ethers } from "hardhat";
-import {
-  AavegotchiFacet,
-  AavegotchiGameFacet,
-  BridgeFacet,
-  CollateralFacet,
-  DAOFacet,
-  ERC1155MarketplaceFacet,
-  ERC721MarketplaceFacet,
-  EscrowFacet,
-  ItemsFacet,
-  ItemsTransferFacet,
-  MetaTransactionsFacet,
-  ShopFacet,
-  SvgFacet,
-  VrfFacet,
-} from "../typechain";
-
 const diamond = require("../js/diamond-util/src/index.js");
 const { aavegotchiSvgs } = require("../svgs/aavegotchi.js");
 const { wearablesSvgs } = require("../svgs/wearables.ts");
@@ -47,7 +27,7 @@ const {
 
 const { getCollaterals } = require("./testCollateralTypes.js");
 
-function addCommas(nStr: string) {
+function addCommas(nStr) {
   nStr += "";
   const x = nStr.split(".");
   let x1 = x[0];
@@ -59,16 +39,14 @@ function addCommas(nStr: string) {
   return x1 + x2;
 }
 
-function strDisplay(str: BigNumber) {
+function strDisplay(str) {
   return addCommas(str.toString());
 }
 
-async function main(scriptName: string) {
+async function main(scriptName) {
   console.log("SCRIPT NAME:", scriptName);
 
   const accounts = await ethers.getSigners();
-
-  console.log("accounts:", accounts);
 
   const account = await accounts[0].getAddress();
   // const secondAccount = await accounts[1].getAddress();
@@ -200,7 +178,7 @@ async function main(scriptName: string) {
     throw Error("No network settings for " + network.name);
   }
 
-  async function deployFacets(...facets: any): Promise<Contract[]> {
+  async function deployFacets(...facets) {
     const instances = [];
     for (let facet of facets) {
       let constructorArgs = [];
@@ -234,7 +212,7 @@ async function main(scriptName: string) {
     erc1155MarketplaceFacet,
     erc721MarketplaceFacet,
     escrowFacet,
-  ] = (await deployFacets(
+  ] = await deployFacets(
     "contracts/Aavegotchi/facets/BridgeFacet.sol:BridgeFacet",
     "contracts/Aavegotchi/facets/AavegotchiFacet.sol:AavegotchiFacet",
     "AavegotchiGameFacet",
@@ -249,22 +227,7 @@ async function main(scriptName: string) {
     "ERC1155MarketplaceFacet",
     "ERC721MarketplaceFacet",
     "EscrowFacet"
-  )) as [
-    BridgeFacet,
-    AavegotchiFacet,
-    AavegotchiGameFacet,
-    SvgFacet,
-    ItemsFacet,
-    ItemsTransferFacet,
-    CollateralFacet,
-    DAOFacet,
-    VrfFacet,
-    ShopFacet,
-    MetaTransactionsFacet,
-    ERC1155MarketplaceFacet,
-    ERC721MarketplaceFacet,
-    EscrowFacet
-  ];
+  );
 
   if (network.name === "hardhat") {
     ghstTokenContract = await diamond.deploy({
@@ -328,10 +291,7 @@ async function main(scriptName: string) {
   totalGasUsed = totalGasUsed.add(receipt.gasUsed);
 
   // create first haunt
-  daoFacet = (await ethers.getContractAt(
-    "DAOFacet",
-    aavegotchiDiamond.address
-  )) as DAOFacet;
+  daoFacet = await ethers.getContractAt("DAOFacet", aavegotchiDiamond.address);
   if (["hardhat", "mumbai"].includes(network.name)) {
     console.log("Adding item managers");
 
@@ -357,7 +317,7 @@ async function main(scriptName: string) {
 
   [eyeShapeSvg, eyeShapeTypesAndSizes] = setupSvg(["eyeShapes", eyeShapeSvgs]);
 
-  let totalPayload: any = {
+  let totalPayload = {
     _hauntMaxSize: initialHauntSize,
     _portalPrice: portalPrice,
     _bodyColor: "0x000000",
@@ -385,14 +345,11 @@ async function main(scriptName: string) {
     "DiamondLoupeFacet",
     aavegotchiDiamond.address
   );
-  vrfFacet = (await ethers.getContractAt(
-    "VrfFacet",
-    aavegotchiDiamond.address
-  )) as VrfFacet;
-  aavegotchiFacet = (await ethers.getContractAt(
+  vrfFacet = await ethers.getContractAt("VrfFacet", aavegotchiDiamond.address);
+  aavegotchiFacet = await ethers.getContractAt(
     "contracts/Aavegotchi/facets/AavegotchiFacet.sol:AavegotchiFacet",
     aavegotchiDiamond.address
-  )) as AavegotchiFacet;
+  );
   aavegotchiGameFacet = await ethers.getContractAt(
     "AavegotchiGameFacet",
     aavegotchiDiamond.address
@@ -417,10 +374,10 @@ async function main(scriptName: string) {
     "EscrowFacet",
     aavegotchiDiamond.address
   );
-  bridgeFacet = (await ethers.getContractAt(
+  bridgeFacet = await ethers.getContractAt(
     "contracts/Aavegotchi/facets/BridgeFacet.sol:BridgeFacet",
     aavegotchiDiamond.address
-  )) as BridgeFacet;
+  );
 
   receipt = await tx.wait();
   console.log(
@@ -461,16 +418,16 @@ async function main(scriptName: string) {
   totalGasUsed = totalGasUsed.add(receipt.gasUsed);
 
   console.log("Adding Item Types");
-  itemsFacet = (await ethers.getContractAt(
+  itemsFacet = await ethers.getContractAt(
     "contracts/Aavegotchi/facets/ItemsFacet.sol:ItemsFacet",
     aavegotchiDiamond.address
-  )) as ItemsFacet;
+  );
   itemsTransferFacet = await ethers.getContractAt(
     "ItemsTransferFacet",
     aavegotchiDiamond.address
   );
 
-  const { itemTypes } = require("./itemTypes.js");
+  const { itemTypes } = require("../data/itemTypes/itemTypes");
 
   tx = await daoFacet.addItemTypes(itemTypes.slice(0, itemTypes.length / 4), {
     gasLimit: gasLimit,
@@ -697,21 +654,21 @@ async function main(scriptName: string) {
   // Upload Svg layers
   svgFacet = await ethers.getContractAt("SvgFacet", aavegotchiDiamond.address);
 
-  function setupSvg(...svgData: any) {
+  function setupSvg(...svgData) {
     const svgTypesAndSizes = [];
-    const svgs: string[] = [];
+    const svgs = [];
     for (const [svgType, svg] of svgData) {
       svgs.push(svg.join(""));
       svgTypesAndSizes.push([
         ethers.utils.formatBytes32String(svgType),
-        svg.map((value: any) => value.length),
+        svg.map((value) => value.length),
       ]);
     }
     return [svgs.join(""), svgTypesAndSizes];
   }
 
   // eslint-disable-next-line no-unused-vars
-  function printSizeInfo(svgTypesAndSizes: any) {
+  function printSizeInfo(svgTypesAndSizes) {
     console.log("------------- SVG Size Info ---------------");
     let sizes = 0;
     for (const [svgType, size] of svgTypesAndSizes) {
@@ -762,7 +719,7 @@ async function main(scriptName: string) {
   console.log("Uploading raffle4 sleeves");
   [svg, svgTypesAndSizes] = setupSvg([
     "sleeves",
-    raffe4SleevesSvgs.map((value: any) => value.svg),
+    raffe4SleevesSvgs.map((value) => value.svg),
   ]);
   printSizeInfo(svgTypesAndSizes);
 
@@ -776,7 +733,7 @@ async function main(scriptName: string) {
   console.log("Uploading miami sleeves");
   [svg, svgTypesAndSizes] = setupSvg([
     "sleeves",
-    miamiSleevesSvgs.map((value: any) => value.svg),
+    miamiSleevesSvgs.map((value) => value.svg),
   ]);
   printSizeInfo(svgTypesAndSizes);
 

@@ -1,4 +1,4 @@
-import { BigNumberish } from "@ethersproject/bignumber";
+import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 
 type Category = 0 | 1 | 2 | 3;
 
@@ -62,6 +62,7 @@ export interface ItemTypeInput {
 }
 
 export type rarityLevel =
+  | ""
   | "common"
   | "uncommon"
   | "rare"
@@ -75,7 +76,7 @@ export interface ItemTypeInputNew {
   svgId: BigNumberish;
   minLevel: BigNumberish;
   canBeTransferred: boolean;
-  rarityLevel: rarityLevel;
+  rarityLevel?: rarityLevel;
   setId: BigNumberish[];
   author: string;
   dimensions: Dimensions;
@@ -95,8 +96,8 @@ export interface ItemTypeInputNew {
   kinshipBonus: BigNumberish;
   rarityScoreModifier?: BigNumberish;
   canPurchaseWithGhst: boolean;
-  totalQuantity?: number;
-  maxQuantity?: number;
+  totalQuantity?: BigNumberish;
+  maxQuantity?: BigNumberish;
 }
 
 export interface ItemTypeOutput {
@@ -410,10 +411,37 @@ export function calculateRarityScoreModifier(maxQuantity: number): number {
   return 0;
 }
 
+export function maxQuantityToRarityLevel(
+  maxQuantity: BigNumberish
+): rarityLevel {
+  if (maxQuantity >= 1000) return "common";
+  if (maxQuantity >= 500) return "uncommon";
+  if (maxQuantity >= 250) return "rare";
+  if (maxQuantity >= 100) return "legendary";
+  if (maxQuantity >= 10) return "mythical";
+  if (maxQuantity >= 1) return "godlike";
+  return "";
+}
+
 export function getItemTypes(itemTypes: ItemTypeInputNew[]): ItemTypeOutput[] {
   const result = [];
+
   for (const itemType of itemTypes) {
-    let maxQuantity: number = rarityLevelToMaxQuantity(itemType.rarityLevel);
+    let maxQuantity: number = 0;
+
+    if (!itemType.maxQuantity && itemType.rarityLevel) {
+      itemType.maxQuantity = rarityLevelToMaxQuantity(itemType.rarityLevel);
+    }
+
+    if (!itemType.rarityLevel) {
+      itemType.rarityLevel = maxQuantityToRarityLevel(
+        itemType.maxQuantity ? itemType.maxQuantity : 0
+      );
+    }
+
+    if (!itemType.totalQuantity) {
+      itemType.totalQuantity = 0;
+    }
 
     let itemTypeOut: ItemTypeOutput = {
       ...itemType,
@@ -430,7 +458,8 @@ export function getItemTypes(itemTypes: ItemTypeInputNew[]): ItemTypeOutput[] {
     let traitBoosters = itemType.traitModifiers.reduce(reducer, 0);
 
     if (traitBoosters !== rarityLevelToTraitBoosters(itemType.rarityLevel)) {
-      throw Error(`Trait Booster for ${itemType.name} does not match rarity`);
+      //  throw Error(`Trait Booster for ${itemType.name} does not match rarity`);
+      console.log(`Trait Booster for ${itemType.name} does not match rarity`);
     }
 
     if (!Array.isArray(itemType.allowedCollaterals)) {
@@ -451,11 +480,12 @@ function rarityLevelToGhstPrice(rarityLevel: rarityLevel): BigNumberish {
       return "100";
     case "legendary":
       return "300";
-
     case "mythical":
       return "2000";
     case "godlike":
       return "10000";
+    default:
+      return "0";
   }
 }
 
@@ -473,6 +503,8 @@ function rarityLevelToMaxQuantity(rarityLevel: rarityLevel): number {
       return 50;
     case "godlike":
       return 5;
+    default:
+      return 0;
   }
 }
 
@@ -490,5 +522,7 @@ export function rarityLevelToTraitBoosters(rarityLevel: rarityLevel): number {
       return 5;
     case "godlike":
       return 6;
+    default:
+      return 0;
   }
 }

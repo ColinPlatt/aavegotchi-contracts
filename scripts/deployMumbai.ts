@@ -27,7 +27,7 @@ import {
   VrfFacet,
 } from "../typechain";
 
-const diamond = require("../js/diamond-util/src/index.js");
+let diamond = require("../js/diamond-util/src/index.js");
 const { aavegotchiSvgs } = require("../svgs/aavegotchi.js");
 const { wearablesSvgs } = require("../svgs/wearables.ts");
 const { collateralsSvgs } = require("../svgs/collaterals.js");
@@ -42,6 +42,7 @@ const { badgeSvgs: szn1Rnd2badgeSvgs } = require("../svgs/szn1rnd2BadgeSvgs");
 const { wearableSets } = require("./wearableSets.ts");
 
 import { itemTypes } from "../data/itemTypes/itemTypes";
+import { getItemTypes } from "./itemTypeHelpers";
 const {
   wearableSets: wearableSetsRaffle4,
 } = require("../data/wearableSets/wearableSetsRaffle4");
@@ -69,8 +70,6 @@ async function main(scriptName: string) {
   console.log("SCRIPT NAME:", scriptName);
 
   const accounts = await ethers.getSigners();
-
-  console.log("accounts:", accounts);
 
   const account = await accounts[0].getAddress();
   // const secondAccount = await accounts[1].getAddress();
@@ -170,10 +169,10 @@ async function main(scriptName: string) {
   } else if (network.name === "mumbai") {
     // childChainManager = '0xb5505a6d998549090530911180f38aC5130101c6'
     childChainManager = "0xb5505a6d998549090530911180f38aC5130101c6";
-    vrfCoordinator = "0xdD3782915140c8f3b190B5D67eAc6dc5760C46E9"; // wrong one
+    vrfCoordinator = "0x8C7382F9D8f56b33781fE506E897a4F1e2d17255"; // wrong one
     linkAddress = "0x326C977E6efc84E512bB9C30f76E30c160eD06FB";
     keyHash =
-      "0x6c3699283bda56ad74f6b855546325b68d482e983852a7a82979cc4807b641f4"; // wrong one
+      "0x6e75b569a01ef56d18cab6a8e71e6600d6ce853834d4a5748b720d06f878b3a4"; // wrong one
     fee = ethers.utils.parseEther("0.0001");
 
     initialHauntSize = "10000";
@@ -213,7 +212,7 @@ async function main(scriptName: string) {
       //@ts-ignore
       const facetInstance = await factory.deploy(...constructorArgs);
       await facetInstance.deployed();
-      const tx = facetInstance.deployTransaction;
+      tx = facetInstance.deployTransaction;
       const receipt = await tx.wait();
       console.log(`${facet} deploy gas used:` + strDisplay(receipt.gasUsed));
       totalGasUsed = totalGasUsed.add(receipt.gasUsed);
@@ -472,22 +471,24 @@ async function main(scriptName: string) {
     aavegotchiDiamond.address
   );
 
-  // tx = await daoFacet.addItemTypes(itemTypes.slice(0, itemTypes.length / 4), {
-  //   gasLimit: gasLimit,
-  // });
-  // receipt = await tx.wait();
-  // if (!receipt.status) {
-  //   throw Error(`Error:: ${tx.hash}`);
-  // }
-  // console.log(
-  //   "Adding Item Types (1 / 4) gas used::" + strDisplay(receipt.gasUsed)
-  // );
-  // totalGasUsed = totalGasUsed.add(receipt.gasUsed);
+  let addItemTypes = getItemTypes(itemTypes.slice(0, itemTypes.length / 6));
 
-  // tx = await daoFacet.addItemTypes(
-  //   itemTypes.slice(itemTypes.length / 4, (itemTypes.length / 4) * 2),
-  //   { gasLimit: gasLimit }
+  tx = await daoFacet.addItemTypes(addItemTypes, {
+    gasLimit: gasLimit,
+  });
+  receipt = await tx.wait();
+  if (!receipt.status) {
+    throw Error(`Error:: ${tx.hash}`);
+  }
+  console.log(
+    "Adding Item Types (1 / 4) gas used::" + strDisplay(receipt.gasUsed)
+  );
+  totalGasUsed = totalGasUsed.add(receipt.gasUsed);
+
+  // addItemTypes = getItemTypes(
+  //   itemTypes.slice(itemTypes.length / 4, (itemTypes.length / 4) * 2)
   // );
+  // tx = await daoFacet.addItemTypes(addItemTypes, { gasLimit: gasLimit });
   // receipt = await tx.wait();
   // if (!receipt.status) {
   //   throw Error(`Error:: ${tx.hash}`);
@@ -497,10 +498,12 @@ async function main(scriptName: string) {
   // );
   // totalGasUsed = totalGasUsed.add(receipt.gasUsed);
 
-  // tx = await daoFacet.addItemTypes(
-  //   itemTypes.slice((itemTypes.length / 4) * 2, (itemTypes.length / 4) * 3),
-  //   { gasLimit: gasLimit }
+  // //third batch
+  // addItemTypes = getItemTypes(
+  //   itemTypes.slice((itemTypes.length / 4) * 2, (itemTypes.length / 4) * 3)
   // );
+
+  // tx = await daoFacet.addItemTypes(addItemTypes, { gasLimit: gasLimit });
   // receipt = await tx.wait();
   // if (!receipt.status) {
   //   throw Error(`Error:: ${tx.hash}`);
@@ -510,10 +513,10 @@ async function main(scriptName: string) {
   // );
   // totalGasUsed = totalGasUsed.add(receipt.gasUsed);
 
-  // tx = await daoFacet.addItemTypes(
-  //   itemTypes.slice((itemTypes.length / 4) * 3),
-  //   { gasLimit: gasLimit }
-  // );
+  // //fourth batch
+  // addItemTypes = getItemTypes(itemTypes.slice((itemTypes.length / 4) * 3));
+  // tx = await daoFacet.addItemTypes(addItemTypes, { gasLimit: gasLimit });
+
   // receipt = await tx.wait();
   // if (!receipt.status) {
   //   throw Error(`Error:: ${tx.hash}`);
@@ -717,68 +720,72 @@ async function main(scriptName: string) {
     for (const [svgType, size] of svgTypesAndSizes) {
       console.log(ethers.utils.parseBytes32String(svgType) + ":" + size);
       for (const nextSize of size) {
+        console.log("next size:", nextSize);
         sizes += nextSize;
       }
     }
     console.log("Total sizes:" + sizes);
   }
 
-  // console.log("Uploading Wearable Svgs");
-  // let svg, svgTypesAndSizes;
-  // console.log("Number of wearables:" + wearablesSvgs.length);
-  // let svgItemsStart = 0;
-  // let svgItemsEnd = 0;
-  // while (true) {
-  //   let itemsSize = 0;
-  //   while (true) {
-  //     if (svgItemsEnd === wearablesSvgs.length) {
-  //       break;
-  //     }
-  //     itemsSize += wearablesSvgs[svgItemsEnd].length;
-  //     if (itemsSize > 24576) {
-  //       break;
-  //     }
-  //     svgItemsEnd++;
-  //   }
-  //   [svg, svgTypesAndSizes] = setupSvg([
-  //     "wearables",
-  //     wearablesSvgs.slice(svgItemsStart, svgItemsEnd),
-  //   ]);
-  //   console.log(`Uploading ${svgItemsStart} to ${svgItemsEnd} wearable SVGs`);
-  //   printSizeInfo(svgTypesAndSizes);
+  console.log("Uploading Wearable Svgs");
+  let svg, svgTypesAndSizes;
+  console.log("Number of wearables:" + wearablesSvgs.length);
 
-  //   //@ts-ignore
-  //   tx = await svgFacet.storeSvg(svg, svgTypesAndSizes);
-  //   receipt = await tx.wait();
-  //   console.log("Gas used:" + strDisplay(receipt.gasUsed));
-  //   console.log("-------------------------------------------");
-  //   totalGasUsed = totalGasUsed.add(receipt.gasUsed);
-  //   if (svgItemsEnd === wearablesSvgs.length) {
-  //     break;
-  //   }
-  //   svgItemsStart = svgItemsEnd;
-  // }
+  let wearablesLength = 151;
 
-  // console.log("Uploading raffle4 sleeves");
-  // [svg, svgTypesAndSizes] = setupSvg([
-  //   "sleeves",
-  //   raffe4SleevesSvgs.map((value: any) => value.svg),
-  // ]);
-  // printSizeInfo(svgTypesAndSizes);
+  let svgItemsStart = 0;
+  let svgItemsEnd = 0;
+  while (true) {
+    let itemsSize = 0;
+    while (true) {
+      if (svgItemsEnd === wearablesLength) {
+        break;
+      }
+      itemsSize += wearablesSvgs[svgItemsEnd].length;
+      if (itemsSize > 24576) {
+        break;
+      }
+      svgItemsEnd++;
+    }
+    [svg, svgTypesAndSizes] = setupSvg([
+      "wearables",
+      wearablesSvgs.slice(svgItemsStart, svgItemsEnd),
+    ]);
+    console.log(`Uploading ${svgItemsStart} to ${svgItemsEnd} wearable SVGs`);
+    printSizeInfo(svgTypesAndSizes);
 
-  // //@ts-ignore
-  // tx = await svgFacet.storeSvg(svg, svgTypesAndSizes);
-  // receipt = await tx.wait();
-  // console.log("Gas used:" + strDisplay(receipt.gasUsed));
-  // totalGasUsed = totalGasUsed.add(receipt.gasUsed);
-  // console.log("-------------------------------------------");
+    //@ts-ignore
+    tx = await svgFacet.storeSvg(svg, svgTypesAndSizes);
+    receipt = await tx.wait();
+    console.log("Gas used:" + strDisplay(receipt.gasUsed));
+    console.log("-------------------------------------------");
+    totalGasUsed = totalGasUsed.add(receipt.gasUsed);
+    if (svgItemsEnd === wearablesLength) {
+      break;
+    }
+    svgItemsStart = svgItemsEnd;
+  }
 
-  // console.log("Uploading miami sleeves");
-  // [svg, svgTypesAndSizes] = setupSvg([
-  //   "sleeves",
-  //   miamiSleevesSvgs.map((value: any) => value.svg),
-  // ]);
-  // printSizeInfo(svgTypesAndSizes);
+  console.log("Uploading raffle4 sleeves");
+  [svg, svgTypesAndSizes] = setupSvg([
+    "sleeves",
+    raffe4SleevesSvgs.map((value: any) => value.svg),
+  ]);
+  printSizeInfo(svgTypesAndSizes);
+
+  //@ts-ignore
+  tx = await svgFacet.storeSvg(svg, svgTypesAndSizes);
+  receipt = await tx.wait();
+  console.log("Gas used:" + strDisplay(receipt.gasUsed));
+  totalGasUsed = totalGasUsed.add(receipt.gasUsed);
+  console.log("-------------------------------------------");
+
+  console.log("Uploading miami sleeves");
+  [svg, svgTypesAndSizes] = setupSvg([
+    "sleeves",
+    miamiSleevesSvgs.map((value: any) => value.svg),
+  ]);
+  printSizeInfo(svgTypesAndSizes);
 
   // //@ts-ignore
   // tx = await svgFacet.storeSvg(svg, svgTypesAndSizes);
@@ -876,74 +883,79 @@ async function main(scriptName: string) {
   // totalGasUsed = totalGasUsed.add(receipt.gasUsed);
   // console.log("-------------------------------------------");
 
-  // // --------------------------------
-  // console.log("Uploading aavegotchi SVGs");
-  // [svg, svgTypesAndSizes] = setupSvg(["aavegotchi", aavegotchiSvgs]);
-  // printSizeInfo(svgTypesAndSizes);
+  // --------------------------------
+  console.log("Uploading aavegotchi SVGs");
+  [svg, svgTypesAndSizes] = setupSvg(["aavegotchi", aavegotchiSvgs]);
+  printSizeInfo(svgTypesAndSizes);
 
-  // //@ts-ignore
-  // tx = await svgFacet.storeSvg(svg, svgTypesAndSizes);
-  // receipt = await tx.wait();
-  // console.log("Gas used:" + strDisplay(receipt.gasUsed));
-  // totalGasUsed = totalGasUsed.add(receipt.gasUsed);
-  // console.log("-------------------------------------------");
+  //@ts-ignore
+  tx = await svgFacet.storeSvg(svg, svgTypesAndSizes);
+  receipt = await tx.wait();
+  console.log("Gas used:" + strDisplay(receipt.gasUsed));
+  totalGasUsed = totalGasUsed.add(receipt.gasUsed);
+  console.log("-------------------------------------------");
 
-  // console.log("Uploading collaterals and eyeShapes");
-  // [svg, svgTypesAndSizes] = setupSvg(
-  //   ["collaterals", collateralsSvgs],
-  //   ["eyeShapes", eyeShapeSvgs]
-  // );
-  // printSizeInfo(svgTypesAndSizes);
+  console.log("Uploading collaterals and eyeShapes");
+  [svg, svgTypesAndSizes] = setupSvg(
+    ["collaterals", collateralsSvgs],
+    ["eyeShapes", eyeShapeSvgs]
+  );
+  printSizeInfo(svgTypesAndSizes);
 
-  // //@ts-ignore
-  // tx = await svgFacet.storeSvg(svg, svgTypesAndSizes);
-  // receipt = await tx.wait();
-  // console.log("Gas used:" + strDisplay(receipt.gasUsed));
-  // totalGasUsed = totalGasUsed.add(receipt.gasUsed);
-  // console.log("-------------------------------------------");
+  //@ts-ignore
+  tx = await svgFacet.storeSvg(svg, svgTypesAndSizes);
+  receipt = await tx.wait();
+  console.log("Gas used:" + strDisplay(receipt.gasUsed));
+  totalGasUsed = totalGasUsed.add(receipt.gasUsed);
+  console.log("-------------------------------------------");
 
-  // console.log("Setting raffle4 sleeves...");
-  // let sleevesSvgId = 23;
-  // let sleeves = [];
-  // for (const sleeve of raffe4SleevesSvgs) {
-  //   sleeves.push({
-  //     sleeveId: sleevesSvgId,
-  //     wearableId: sleeve.id,
-  //   });
-  //   sleevesSvgId++;
+  console.log("Setting raffle4 sleeves...");
+  let sleevesSvgId = 23;
+  let sleeves = [];
+  for (const sleeve of raffe4SleevesSvgs) {
+    sleeves.push({
+      sleeveId: sleevesSvgId,
+      wearableId: sleeve.id,
+    });
+    sleevesSvgId++;
+  }
+  tx = await svgFacet.setSleeves(sleeves, { gasLimit: gasLimit });
+  receipt = await tx.wait();
+  console.log("Gas used:" + strDisplay(receipt.gasUsed));
+  totalGasUsed = totalGasUsed.add(receipt.gasUsed);
+
+  console.log("Setting miami sleeves...");
+  sleevesSvgId = 27;
+  sleeves = [];
+  for (const sleeve of miamiSleevesSvgs) {
+    sleeves.push({
+      sleeveId: sleevesSvgId,
+      wearableId: sleeve.id,
+    });
+    sleevesSvgId++;
+  }
+  tx = await svgFacet.setSleeves(sleeves, { gasLimit: gasLimit });
+  receipt = await tx.wait();
+  console.log("Gas used:" + strDisplay(receipt.gasUsed));
+  totalGasUsed = totalGasUsed.add(receipt.gasUsed);
+
+  // if (network.name === 'matic') {
+  // transfer ownership
+  const newOwner = "0x94cb5C277FCC64C274Bd30847f0821077B231022";
+  console.log(
+    "Transferring ownership of diamond: " + aavegotchiDiamond.address
+  );
+  diamond = await ethers.getContractAt(
+    "OwnershipFacet",
+    aavegotchiDiamond.address
+  );
+  tx = await diamond.transferOwnership(newOwner);
+  console.log("Transaction hash: " + tx.hash);
+  receipt = await tx.wait();
+  console.log("Transfer Transaction complete");
+  console.log("Gas used:" + strDisplay(receipt.gasUsed));
+  totalGasUsed = totalGasUsed.add(receipt.gasUsed);
   // }
-  // tx = await svgFacet.setSleeves(sleeves, { gasLimit: gasLimit });
-  // receipt = await tx.wait();
-  // console.log("Gas used:" + strDisplay(receipt.gasUsed));
-  // totalGasUsed = totalGasUsed.add(receipt.gasUsed);
-
-  // console.log("Setting miami sleeves...");
-  // sleevesSvgId = 27;
-  // sleeves = [];
-  // for (const sleeve of miamiSleevesSvgs) {
-  //   sleeves.push({
-  //     sleeveId: sleevesSvgId,
-  //     wearableId: sleeve.id,
-  //   });
-  //   sleevesSvgId++;
-  // }
-  // tx = await svgFacet.setSleeves(sleeves, { gasLimit: gasLimit });
-  // receipt = await tx.wait();
-  // console.log("Gas used:" + strDisplay(receipt.gasUsed));
-  // totalGasUsed = totalGasUsed.add(receipt.gasUsed);
-
-  // // if (network.name === 'matic') {
-  //   // transfer ownership
-  //   const newOwner = '0x94cb5C277FCC64C274Bd30847f0821077B231022'
-  //   console.log('Transferring ownership of diamond: ' + aavegotchiDiamond.address)
-  //   const diamond = await ethers.getContractAt('OwnershipFacet', aavegotchiDiamond.address)
-  //   const tx = await diamond.transferOwnership(newOwner)
-  //   console.log('Transaction hash: ' + tx.hash)
-  //   receipt = await tx.wait()
-  //   console.log('Transfer Transaction complete')
-  //   console.log('Gas used:' + strDisplay(receipt.gasUsed))
-  //   totalGasUsed = totalGasUsed.add(receipt.gasUsed)
-  // // }
 
   console.log("Total gas used: " + strDisplay(totalGasUsed));
   return {
